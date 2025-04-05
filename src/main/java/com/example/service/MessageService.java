@@ -1,11 +1,9 @@
 package com.example.service;
 
-import org.h2.util.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import com.example.entity.*;
+import com.example.exception.BadRequestException;
 import com.example.repository.*;
 
 import java.util.*;
@@ -22,7 +20,7 @@ public class MessageService {
         this.accountRepository=accountRepository;
     }
 
-    public ResponseEntity<Message> createMessage(Message newMessage){
+    public Message createMessage(Message newMessage){
         String messageText = newMessage.getMessageText();
         Integer postedBy = newMessage.getPostedBy();
         Message finalMessage=null;
@@ -30,60 +28,59 @@ public class MessageService {
         Optional<Account> optionalAccount = accountRepository.findById(postedBy);
         if (optionalAccount.isPresent()){
             if (messageText.length()>255 || messageText.isEmpty()){
-                return new ResponseEntity<>(HttpStatus.BAD_REQUEST);    
+                throw new BadRequestException("Invalid message text. Text length should be 1 to 255.");
             }
             else{
-            finalMessage = messageRepository.save(newMessage);
+                finalMessage = messageRepository.save(newMessage);
             }
         }
         else{
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+            throw new BadRequestException("Account not found. Create or Login to post message");
         }
-        return new ResponseEntity<>(finalMessage,HttpStatus.OK);
-
+        return finalMessage;
     }
 
-    public ResponseEntity<List<Message>> getAllMessages(){
+    public List<Message> getAllMessages(){
         List<Message> messageList = new ArrayList<>();
         messageList = messageRepository.findAll();
-        return new ResponseEntity<>(messageList, HttpStatus.OK);
+        return messageList;
     }
 
-    public ResponseEntity<Message> getByMessageId(Integer messageId){
+    public Message getByMessageId(Integer messageId){
         Optional<Message> optionalMessage = messageRepository.findById(messageId);
         if (optionalMessage.isPresent()){
-            return new ResponseEntity<>(optionalMessage.get(), HttpStatus.OK);
+            return optionalMessage.get();
         }
-        return new ResponseEntity<>(HttpStatus.OK);
+        return null;
     }
     
-    public ResponseEntity<String> deleteMessageById(Integer messageId){
+    public String deleteMessageById(Integer messageId){
         Optional<Message> optionalMessage = messageRepository.findById(messageId);
         if (optionalMessage.isPresent()){
             messageRepository.deleteById(messageId);
-            return new ResponseEntity<>("1", HttpStatus.OK);
+            return "1";
         }
-        return new ResponseEntity<>("",HttpStatus.OK);
+        return "";
     }
 
-    public ResponseEntity<String> updateMessageById(Integer messageId, String messageText){
+    public String updateMessageById(Integer messageId, String messageText){
         Optional<Message> optionalMessage = messageRepository.findById(messageId);
 
         if (messageText.isEmpty() || messageText.length()>255 || messageText.length()==0){
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+            throw new BadRequestException("Invalid message text. Text length should be 1 to 255.");
         }
         if (!optionalMessage.isPresent()){
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+            throw new BadRequestException("Message not found by MessageId:" + messageId + " for update");
         }
         Message msg = optionalMessage.get();
         msg.setMessageText(messageText);
         messageRepository.save(msg);
-        return new ResponseEntity<>("1", HttpStatus.OK);
+        return "1";
     }
 
-    public ResponseEntity<List<Message>> getMessagesByAccountId(Integer accountId){
+    public List<Message> getMessagesByAccountId(Integer accountId){
         List<Message> messagesByAccount = new ArrayList<>();
         messagesByAccount = messageRepository.findAllByPostedBy(accountId);
-        return new ResponseEntity<>(messagesByAccount, HttpStatus.OK);
+        return messagesByAccount;
     }
 }

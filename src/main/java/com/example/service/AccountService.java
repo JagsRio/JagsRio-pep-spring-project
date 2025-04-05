@@ -3,10 +3,11 @@ package com.example.service;
 import java.util.*;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import com.example.entity.Account;
+import com.example.exception.BadRequestException;
+import com.example.exception.ConflictRequestException;
+import com.example.exception.UnAuthorizedException;
 import com.example.repository.AccountRepository;
 
 @Service
@@ -19,30 +20,30 @@ public class AccountService {
         this.accountRepository = accountRepository;
     }
 
-    public ResponseEntity<Account> registerAccount(Account newAccount){
+    public Account registerAccount(Account newAccount){
         String username = newAccount.getUsername();
         String password = newAccount.getPassword();
         Account finalAccount = null;
         if (username.isEmpty() || password.length()<4){
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+            throw new BadRequestException("Invalid username/password. Check and try again.");
         }
         Optional<Account> optionalAccount = accountRepository.findByUsername(username);
         if (optionalAccount.isPresent()){
-            return new ResponseEntity<>(HttpStatus.CONFLICT);
+            throw new ConflictRequestException("Account already exists with the username:" + username);
         } else{
             finalAccount =  accountRepository.save(newAccount);
         }
-        return new ResponseEntity<>(finalAccount, HttpStatus.OK);
+        return finalAccount;
     }
 
-    public ResponseEntity<Account> loginAccount(Account account){
+    public Account loginAccount(Account account){
         String username = account.getUsername();
         String password = account.getPassword();
 
         Optional<Account> optionalAccount = accountRepository.findByUsernameAndPassword(username, password);
         if (optionalAccount.isPresent()){
-            return new ResponseEntity<>(optionalAccount.get(), HttpStatus.OK);
+            return optionalAccount.get();
         }
-        return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        throw new UnAuthorizedException("Invalid username/password. Try again");
     }
 }
